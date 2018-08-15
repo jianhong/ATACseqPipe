@@ -1,0 +1,19 @@
+name: jo_ATACseqPipe
+channels:
+  - bioconda
+  - r
+  - anaconda
+  - conda-forge
+dependencies:
+  - python=2.7
+  - fastqc=0.11.7
+  - trim-galore=0.5.0
+  - blast=2.7.1
+  - bowtie2=2.3.4
+  - samtools=1.7
+  - picard=2.18.9
+  - macs2=2.1.1
+  - bedtools=2.27.1
+  - deeptools=3.1.0
+  - ucsc-bedgraphtobigwig
+  - r=3.5.0
