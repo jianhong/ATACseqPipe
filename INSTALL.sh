@@ -42,10 +42,10 @@ mkdir -p blastdb
 cd blastdb && update_blastdb.pl --decompress nt
 
 ## prepare for taxReport
-wget -O $prefix/bin/s2c_2_fasta.pl https://raw.githubusercontent.com/jianhong/ATACseqPipe/src/s2c_2_fasta.pl
-wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/src/fq2sc.cpp
-wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/src/fq2sc.h
-wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/src/kseq.h
+wget -O $prefix/bin/s2c_2_fasta.pl https://raw.githubusercontent.com/jianhong/ATACseqPipe/master/src/s2c_2_fasta.pl
+wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/master/src/fq2sc.cpp
+wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/master/src/fq2sc.h
+wget https://raw.githubusercontent.com/jianhong/ATACseqPipe/master/src/kseq.h
 g++ -o $prefix/bin/fq2sc fq2sc.cpp -lz
 
 ## download the reference files
