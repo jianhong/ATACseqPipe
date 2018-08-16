@@ -38,8 +38,27 @@ echo "install.packages(\"BiocManager\", repos='https://cloud.r-project.org', qui
 #echo "BiocManager::install(c(\"ChIPpeakAnno\", \"trackViewer\", \"motifStack\", \"ATACseqQC\", \"GeneNetworkBuilder\", \"DESeq2\", \"csaw\", \"DiffBind\"), suppressUpdates=TRUE, ask=FALSE)" | R --vanilla
 
 ## download the blastdb
-mkdir -p blastdb
-cd blastdb && update_blastdb.pl --decompress nt
+mkdir -p $prefix/blastdb
+cd $prefix/blastdb && update_blastdb.pl --decompress nt
+cat <<EOT > ~/.ncbirc
+; Start the section for BLAST configuration
+[BLAST]
+; Specifies the path where BLAST databases are installed
+BLASTDB=$prefix/blastdb
+; Specifies the data sources to use for automatic resolution 
+; for sequence identifiers 
+DATA_LOADERS=blastdb 
+; Specifies the BLAST database to use resolve protein sequences 
+BLASTDB_PROT_DATA_LOADER=nr
+; Specifies the BLAST database to use resolve dna sequences 
+BLASTDB_NUCL_DATA_LOADER=nt
+
+; Windowmasker settings
+[WINDOW_MASKER]
+WINDOW_MASKER_PATH=$prefix/blastdb/windowmasker
+; end of file
+
+EOT
 
 ## prepare for taxReport
 wget -O $prefix/bin/s2c_2_fasta.pl https://raw.githubusercontent.com/jianhong/ATACseqPipe/master/src/s2c_2_fasta.pl

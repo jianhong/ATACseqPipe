@@ -6,3 +6,4 @@ Description:
 License: GPL (>=2)
 Dependent: Perl, Perl:Pod/Usage;
            zlib, g++;
+           wget, make;
