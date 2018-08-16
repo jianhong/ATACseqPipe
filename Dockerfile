@@ -55,7 +55,7 @@ RUN cd /tmp/ATACseqPipe/src && g++ -o /usr/local/bin/fq2sc fq2sc.cpp -lz && \
     cp s2c_2_fasta.pl /usr/local/bin/ && chmod +x /usr/local/bin/s2c_2_fasta.pl && \
     cp ../blastDB/ncbirc /etc/.ncbirc
     
-RUN echo "install.packages(\"BiocManager\", repos='https://cloud.r-project.org', quiet=TRUE)" | R --vanilla
+RUN echo "install.packages(\"BiocManager\", repos='https://cloud.r-project.org', quiet=TRUE)" | /opt/conda/bin/R --vanilla
 
 ## make directory
 RUN mkdir -p /blastdb && mkdir -p /igenome
