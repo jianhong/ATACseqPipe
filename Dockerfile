@@ -12,8 +12,8 @@
 #  $ docker push jianhong/atacseqpipe:latest
 #  $ cd ~
 #  $ docker pull jianhong/atacseqpipe:latest
-#  $ mkdir tmp4ATACseqPipe
-#  $ docker run -it --rm -v ${PWD}/tmp4ATACseqPipe:/volume/data \
+#  $ mkdir tmp4atacseqpipe
+#  $ docker run -it --rm -v ${PWD}/tmp4atacseqpipe:/volume/data \
 #  $       jianhong/atacseqpipe:latest bash
 ##################################################################
 # Set the base image to Ubuntu
@@ -49,13 +49,12 @@ RUN /opt/conda/bin/conda update -y conda
 RUN cd /tmp/ && git clone https://github.com/jianhong/ATACseqPipe.git && \
     cd ATACseqPipe && /opt/conda/bin/conda env create -f condaEnv.yml
 
-RUN /bin/bash -c "source /opt/conda/bin/activate jo_ATACseqPipe"
+## test active the environment
+RUN /bin/bash -c "source /opt/conda/bin/activate jo_ATACseqPipe && echo 'install.packages(\"BiocManager\", repos=\"https://cloud.r-project.org\", quiet=TRUE)' | R --vanilla"
 
 RUN cd /tmp/ATACseqPipe/src && g++ -o /usr/local/bin/fq2sc fq2sc.cpp -lz && \
     cp s2c_2_fasta.pl /usr/local/bin/ && chmod +x /usr/local/bin/s2c_2_fasta.pl && \
     cp ../blastDB/ncbirc /etc/.ncbirc
-    
-RUN echo "install.packages(\"BiocManager\", repos='https://cloud.r-project.org', quiet=TRUE)" | /opt/conda/bin/R --vanilla
 
 ## make directory
 RUN mkdir -p /blastdb && mkdir -p /igenome
