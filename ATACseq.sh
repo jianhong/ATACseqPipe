@@ -1,5 +1,5 @@
 #!/bin/bash
-usage="$(basename "$0") [-h] [-spfnetcugd] -- RNAseq_pipeline
+usage="$(basename "$0") [-h] [-spfnetcugd] -- ATACseq_pipeline
 
 where:
     -h  show this help text
@@ -10,7 +10,7 @@ where:
     -e  single end (se) or paired end (pe); default se
     -c  number of threads; default 1
     -t  temp folder; default /tmp
-    -u  root of reference files; default iGenomes. The subfolder should be species/Sequence/...
+    -u  root of reference files; default igenome. The subfolder should be species/Sequence/...
     -g  genomeSize for MACS2 (--gsize)
     -d  dry-run
 	
@@ -30,13 +30,17 @@ folder=fastq
 species=danRer10
 surname=atacseq
 singleEnd=se
-cups=1
+cpus=1
 tmpfolder="/tmp"
-UCSC="iGenomes"
+UCSC="/igenome"
 run="yes"
 genome=0
 
-decleare -A genomeSize=(["hg38"]="2.7e9", ["mm10"]="1.87e9", ["ce6"]="9e7", ["dm3"]="1.2e8", ["danRer10"]="1.5e9")
+declare -A genomeSize=(["hg38"]="2.7e9", ["mm10"]="1.87e9", ["ce6"]="9e7", ["dm3"]="1.2e8", ["danRer10"]="1.5e9")
+declare -A sciencename=(["hg38"]="Homo_sapiens", ["hg19"]="Homo_sapiens", \
+                         ["mm10"]="Mus_musculus", ["ce6"]="Caenorhabditis_elegans", \
+                         ["dm3"]="Drosophila_melanogaster", ["danRer10"]="Danio_rerio")
+
 
 while getopts ':hs:p:f:n:t:d' option; do
 	case "$option" in
@@ -130,7 +134,7 @@ numOfLine=100000
 mismatch=2
 numOfL=$(($numOfLine * 4))
 
-for i in ${filenames[@]}
+for ((i=0; i<${#filenames[@]}; i++))
 do
   ## fastqc
   mkdir -p fastqc/${group[$i]}
@@ -148,14 +152,58 @@ do
   blastn -num_threads $cpus -db nt -max_target_seqs 1 \
   -outfmt '6 qaccver saccver staxid sblastname ssciname scomname pident length mismatch gapopen qstart qend sstart send evalue bitscore' \
   -query taxReport/${filenames[$i]}.fa -out taxReport/${filenames[$i]}.blastn.txt
-  cat <<ET | R --vanilla
+  ## should I change to Rapsearch?
+  rm taxReport/${filenames[$i]}.fa
+  rm taxReport/${filenames[$i]}.txt
+  rm taxReport/${filenames[$i]}.fq
+  
+  ## mapping by bowtie2
+  bowtie2 -x $UCSC/${sciencename[$species]}/UCSC/$species/Sequence/Bowtie2Index/genome \
+        -U fastq.trimmed/${group[$i]}/${filenames[$i]}_trimmed.fq.gz \
+        -S sam/$prefix.$species.${tag[$i]}.sam \
+        --very-sensitive \
+        -p $cpus \
+        > log/$prefix.$species.${tag[$i]}.log 2>&1
+  
+  ## sam to bam
+  samtools view -bhS -q 30 sam/$prefix.$species.${tag[$i]}.sam > bam/$prefix.$species.${tag[$i]}.bam
+  rm sam/$prefix.$species.${tag[$i]}.sam
+  samtools sort bam/$prefix.$species.${tag[$i]}.bam -o bam/$prefix.$species.${tag[$i]}.srt.bam
+  samtools index bam/$prefix.$species.${tag[$i]}.srt.bam
+  rm bam/$prefix.$species.${tag[$i]}.bam
+  
+  ## remove PCR duplicates
+  picard MarkDuplicates INPUT=bam/$prefix.$species.${tag[$i]}.srt.bam \
+	OUTPUT=bam/$prefix.$species.${tag[$i]}.markDup.bam \
+	METRICS_FILE=log/$prefix.$species.${tag[$i]}.srt.fil.picard_info.txt \
+	REMOVE_DUPLICATES=true ASSUME_SORTED=true VALIDATION_STRINGENCY=LENIENT
+  samtools index bam/$prefix.$species.${tag[$i]}.markDup.bam
+  
+  ## call peaks by q=0.05 to call as much as possible peaks, later, use diffbind to test the difference.
+  mkdir -p macs2/${tag[$i]}
+  macs2 callpeak -t bam/$prefix.$species.${tag[$i]}.markDup.bam \
+                 -f BAM -g $genome  -n $prefix.$species.${tag[$i]} \
+                 --outdir macs2/${tag[$i]} -q 0.05 \
+                 --nomodel --shift 37 --extsize 73 -B
+
+
+  # generate bigwig files
+  curr=$prefix.$species.${tag[$i]}.markDup
+  samtools view -H bam/$curr.bam | grep @SQ | awk -F $'\t' 'BEGIN {OFS=FS} {gsub("[SL]N:", ""); print $2,$3}' > $curr.$i.ChromInfo.txt
+  sort -k1,1 -k2,2n macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.bdg > macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg
+  bedGraphToBigWig macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg $curr.$i.ChromInfo.txt bigwig/$prefix.$species.${tag[$i]}.bw
+  rm $curr.$i.ChromInfo.txt
+  rm macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg
+done
+
+cat <<ET | R --vanilla
 x <- read.delim("taxReport/${filenames[$i]}.blastn.txt", header=FALSE, stringsAsFactor=FALSE)
 colnames(x) <- c("qaccver", "saccver", "staxid", "sblastname", "ssciname", "scomname", "pident", "length", "mismatch", "gapopen", "qstart", "qend", "sstart", "send", "evalue", "bitscore")
-x <- x[x\\\$mismatch<=$mismatch, ]
-x <- x[order(x\\\$qaccver, -x\\\$pident, x\\\$evalue), ]
-x <- x[!duplicated(x\\\$qaccver), ]
-sc <- as.numeric(sub("SEQ_.*?_x", "", x\\\$qaccver))
-species <- paste0(x\\\$ssciname, " (", x\\\$scomname, ")", " [", x\\\$sblastname, "]")
+x <- x[x\$mismatch<=$mismatch, ]
+x <- x[order(x\$qaccver, -x\$pident, x\$evalue), ]
+x <- x[!duplicated(x\$qaccver), ]
+sc <- as.numeric(sub("SEQ_.*?_x", "", x\$qaccver))
+species <- paste0(x\$ssciname, " (", x\$scomname, ")", " [", x\$sblastname, "]")
 w <- rowsum(sc, species)
 w <- w[order(-w[, 1]), ]
 p <- w/$numOfLine
@@ -178,45 +226,5 @@ d <- cbind(d, fastq=fq, cross.species.contamination=e)
 colnames(d) <- c("species", "percentage", "fastq", "cross.species.contamination")
 write.csv(d, "taxReport.csv", row.names=FALSE)
 ET
-  rm taxReport/${filenames[$i]}.fa
-  rm taxReport/${filenames[$i]}.txt
-  rm taxReport/${filenames[$i]}.fastq
-  
-  ## mapping by bowtie2
-  bowtie2 -x $UCSC/$species/Sequence/Bowtie2Index/genome \
-        -U fastq.trimmed/${group[\$i]}/${filenames[$i]}_trimmed.fq.gz \
-        -S sam/$prefix.$species.${tag[$i]}.sam \
-        --very-sensitive \
-        -p $cpus \
-        > sam/$prefix.$species.${tag[$i]}.log
-  
-  ## sam to bam
-  samtools view -bhS -q 30 sam/$prefix.$species.${tag[$i]}.sam > bam/$prefix.$species.${tag[$i]}.bam
-  rm sam/$prefix.$species.${tag[$i]}.sam
-  samtools sort bam/$prefix.$species.${tag[$i]}.bam -o bam/$prefix.$species.${tag[$i]}.srt.bam
-  samtools index bam/$prefix.$species.${tag[\$i]}.srt.bam
-  rm bam/$prefix.$species.${tag[$i]}.bam
-  
-  ## remove PCR duplicates
-  picard MarkDuplicates INPUT=bam/$prefix.$species.${tag[$i]}.srt.bam \
-	OUTPUT=bam/markDup/$prefix.$species.${tag[$i]}.markDup.bam \
-	METRICS_FILE=bam/$prefix.$species.${tag[$i]}.srt.fil.picard_info.txt \
-	REMOVE_DUPLICATES=true ASSUME_SORTED=true VALIDATION_STRINGENCY=LENIENT
-  
-  ## call peaks
-  mkdir -p macs2/${tag[$i]}
-  macs2 callpeak -t bam/$prefix.$species.${tag[$i]}.markDup.bam \
-                 -f BAM -g $genome  -n $prefix.$species.${tag[$i]} \
-                 --outdir macs2/${tag[$i]} -q 0.05 \
-                 --nomodel --shift 37 --extsize 73 -B
 
-
-  # generate bigwig files
-  curr=$prefix.$species.${tag[$i]}.markDup
-  samtools view -H bam/$curr.bam | grep @SQ | awk -F $'\t' 'BEGIN {OFS=FS} {gsub("[SL]N:", ""); print $2,$3}' > $curr.$i.ChromInfo.txt
-  sort -k1,1 -k2,2n macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.bdg macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg
-  bedGraphToBigWig macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg $curr.$i.ChromInfo.txt bigwig/$prefix.$species.${tag[$i]}.bw
-  rm $curr.$i.ChromInfo.txt
-  rm macs2/${tag[$i]}/$prefix.$species.${tag[$i]}_treat_pileup.srt.bdg
-done
-
+### peak comparison

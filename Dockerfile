@@ -29,7 +29,7 @@ ENV PATH $PATH:/opt/conda/bin
 # Update the repository sources list, install wget, unzip, curl, git
 RUN \
   apt-get update --fix-missing && \
-  apt-get install --yes wget git bzip2 ca-certificates curl unzip gdebi-core git rsync libssl-dev libcurl4-openssl-dev libgsl-dev zlib1g-dev g++ && \
+  apt-get install --yes wget git bzip2 ca-certificates curl unzip gdebi-core git rsync libssl-dev libcurl4-openssl-dev libgsl-dev zlib1g-dev ttf-dejavu g++ && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/*
   
