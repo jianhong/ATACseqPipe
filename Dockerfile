@@ -4,8 +4,8 @@
 # images
 # Based on Ubuntu
 #  $ cd ATACseqPipe.docker
-#  $ VERSION=0.0.1
-#  $ docker build -t jianhong/atacseqpipe:$VERSION .
+#  $ VERSION=0.0.2
+#  $ docker build --no-cache -t jianhong/atacseqpipe:$VERSION .
 #  $ docker images jianhong/atacseqpipe:$VERSION
 #  $ docker push jianhong/atacseqpipe:$VERSION
 #  $ docker tag jianhong/atacseqpipe:$VERSION jianhong/atacseqpipe:latest
@@ -59,4 +59,5 @@ RUN cd /tmp/ATACseqPipe/src && g++ -o /usr/local/bin/fq2sc fq2sc.cpp -lz && \
 ## make directory
 RUN mkdir -p /blastdb && mkdir -p /igenome
 
-
+## install ATACseqQC
+RUN /bin/bash -c "source /opt/conda/bin/activate jo_ATACseqPipe && echo 'BiocManager::install(\"ATACseqQC\", version=\"3.8\")' | R --vanilla"
