@@ -20,9 +20,9 @@ Bootstrap:docker
 
   mkdir -p /blastdb && mkdir -p /igenome
   echo 'install.packages("BiocManager", repos="https://cloud.r-project.org", quiet=TRUE)' | R --vanilla
-  echo 'BiocManager::install("ChIPpeakAnno")' | R --vanilla
-  echo 'BiocManager::install(c("GenomicScores", "randomForest", "motifStack", "preseqR"))' | R --vanilla
-  cd /tmp/ && git clone https://github.com/jianhong/ATACseqQC.git && R CMD INSTALL ATACseqQC
+#  echo 'BiocManager::install("ChIPpeakAnno")' | R --vanilla
+#  echo 'BiocManager::install(c("GenomicScores", "randomForest", "motifStack", "preseqR"))' | R --vanilla
+#  cd /tmp/ && git clone https://github.com/jianhong/ATACseqQC.git && R CMD INSTALL ATACseqQC
 
   /opt/conda/bin/conda env create -f /condaEnv.yml
   /opt/conda/bin/conda clean -a
