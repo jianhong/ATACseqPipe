@@ -1,7 +1,6 @@
 name: jo_ATACseqPipe
 channels:
   - bioconda
-  - r
   - anaconda
   - conda-forge
 dependencies:
@@ -16,4 +15,3 @@ dependencies:
   - bedtools=2.27.1
   - deeptools=3.1.0
   - ucsc-bedgraphtobigwig
-  - r=3.5.0
