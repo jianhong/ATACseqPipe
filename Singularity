@@ -35,6 +35,14 @@ Bootstrap:docker
 ## test conda
   /opt/conda/bin/conda update -y conda
 
-  /opt/conda/bin/conda env create -f $tmpfold/ATACseqPipe/condaEnv.yml
-  /opt/conda/bin/conda clean -a
-  /opt/conda/bin/activate ATACseqPipe
+#  /opt/conda/bin/conda env create -f $tmpfold/ATACseqPipe/condaEnv.yml
+#  /opt/conda/bin/conda clean -a
+#  /opt/conda/bin/activate jo_ATACseqPipe
+
+  /opt/conda/bin/conda install -y -c bioconda fastqc python trim-galore blast bowtie2 \
+  bwa samtools picard macs2 bedtools deeptools ucsc-bedgraphtobigwig deeptools
+## fix the issue of samtools cannot find libcrypto.so.1.0.0
+  ln -s /opt/conda/lib/libcrypto.so.1.1 /opt/conda/lib/libcrypto.so.1.0.0
+  ln -s /lib/x86_64-linux-gnu/libssl.so.1.1 /lib/x86_64-linux-gnu/libssl.so.1.0.0
+
+  /bin/bash -c "echo 'BiocManager::install(\"MotifDb\")' | R --vanilla"
