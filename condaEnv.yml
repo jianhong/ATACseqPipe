@@ -1,4 +1,4 @@
-name: jo_ATACseqPipe
+name: ATACseqPipe
 channels:
   - bioconda
   - anaconda
